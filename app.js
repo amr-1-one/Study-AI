@@ -27,8 +27,8 @@ function splitScenes(text, count) {
     const words = clean.split(" ");
     const groups = Math.min(count, Math.max(1, Math.ceil(words.length / 8)));
     const size = Math.ceil(words.length / groups);
-    parts = [];
 
+    parts = [];
     for (let i = 0; i < words.length; i += size) {
       parts.push(words.slice(i, i + size).join(" "));
     }
@@ -63,7 +63,6 @@ function buildScenes() {
     Math.min(6, Math.round(Number($("duration").value) / 8))
   );
 
-  // ملاحظة: هذا تقسيم تلقائي للنص وليس توليدًا بالذكاء الاصطناعي.
   state.scenes = splitScenes(idea, count);
   state.images = state.scenes.map((_, i) => state.images[i] || null);
   state.current = 0;
@@ -90,6 +89,7 @@ function buildScenes() {
 
 function wrapText(text, maxWidth, font) {
   ctx.font = font;
+
   const words = text.split(/\s+/);
   const lines = [];
   let line = "";
@@ -116,10 +116,10 @@ function drawPreview() {
 
   ctx.clearRect(0, 0, width, height);
 
-  if (image && image.complete) {
+  if (image && image.complete && image.naturalWidth > 0) {
     const scale = Math.max(
-      width / image.width,
-      height / image.height
+      width / image.naturalWidth,
+      height / image.naturalHeight
     );
 
     const sourceWidth = width / scale;
@@ -127,8 +127,8 @@ function drawPreview() {
 
     ctx.drawImage(
       image,
-      (image.width - sourceWidth) / 2,
-      (image.height - sourceHeight) / 2,
+      (image.naturalWidth - sourceWidth) / 2,
+      (image.naturalHeight - sourceHeight) / 2,
       sourceWidth,
       sourceHeight,
       0,
@@ -151,18 +151,26 @@ function drawPreview() {
 
     ctx.fillStyle = "rgba(174, 140, 255, 0.14)";
     ctx.beginPath();
-    ctx.arc(285, 145, 105, 0, Math.PI * 2);
+    ctx.arc(width * 0.7, height * 0.25, width * 0.25, 0, Math.PI * 2);
     ctx.fill();
   }
 
   ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   ctx.direction = "rtl";
+
   ctx.fillStyle = "#d6c8ff";
-  ctx.font = "700 14px Cairo, Arial";
+  ctx.font = "700 14px Cairo, Arial, sans-serif";
   ctx.fillText("فكرة لفيديو", width / 2, 58);
 
   ctx.beginPath();
-  ctx.roundRect(20, height * 0.55, width - 40, height * 0.32, 18);
+
+  if (typeof ctx.roundRect === "function") {
+    ctx.roundRect(20, height * 0.55, width - 40, height * 0.32, 18);
+  } else {
+    ctx.rect(20, height * 0.55, width - 40, height * 0.32);
+  }
+
   ctx.fillStyle = "rgba(7, 6, 16, 0.72)";
   ctx.fill();
 
@@ -172,21 +180,20 @@ function drawPreview() {
   const lines = wrapText(
     text,
     width - 62,
-    "700 23px Cairo, Arial"
+    "700 23px Cairo, Arial, sans-serif"
   ).slice(0, 5);
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = "700 23px Cairo, Arial";
+  ctx.font = "700 23px Cairo, Arial, sans-serif";
 
-  const startY =
-    height * 0.69 - ((lines.length - 1) * 35) / 2;
+  const startY = height * 0.69 - ((lines.length - 1) * 35) / 2;
 
   lines.forEach((line, i) => {
     ctx.fillText(line, width / 2, startY + i * 35);
   });
 
   ctx.fillStyle = "#d6ccf7";
-  ctx.font = "12px Cairo, Arial";
+  ctx.font = "12px Cairo, Arial, sans-serif";
 
   const counter = state.scenes.length
     ? `${state.current + 1} / ${state.scenes.length}`
@@ -265,7 +272,7 @@ function previewVoice() {
   utterance.rate = 0.95;
 
   utterance.onstart = () => {
-    setStatus("يعمل الصوت التجريبي. هذا الصوت لا يُدمج في الفيديو.");
+    setStatus("يعمل الصوت التجريبي. لن يُدمج تلقائيًا في الفيديو.");
   };
 
   utterance.onend = () => {
@@ -280,7 +287,10 @@ function previewVoice() {
 }
 
 function loadAudio(file) {
-  if (!file || !file.type.startsWith("audio/")) return;
+  if (!file || !file.type.startsWith("audio/")) {
+    setStatus("اختار ملفًا صوتيًا صالحًا.");
+    return;
+  }
 
   if (state.audioUrl) {
     URL.revokeObjectURL(state.audioUrl);
@@ -289,13 +299,18 @@ function loadAudio(file) {
   if (state.audio) {
     state.audio.pause();
     state.audio.removeAttribute("src");
+    state.audio.load();
   }
 
   state.audioUrl = URL.createObjectURL(file);
-  state.audio = new Audio();
-  state.audio.src = state.audioUrl;
-  state.audio.load();
+  state.audio = new Audio(state.audioUrl);
+  state.audio.preload = "auto";
 
+  state.audio.addEventListener("error", () => {
+    setStatus("تعذر قراءة الملف الصوتي. جرّب ملف MP3 أو WAV.");
+  }, { once: true });
+
+  state.audio.load();
   setStatus("تم اختيار ملف الصوت.");
 }
 
@@ -311,14 +326,32 @@ async function exportVideo() {
   $("export").disabled = true;
 
   const originalScene = state.current;
-  const stream = canvas.captureStream(30);
 
-  let audioContext = null;
-  let audioSource = null;
-  let audioDestination = null;
-  let recorder = null;
+  let stream;
+  let recorder;
+  let audioContext;
+  let audioSource;
+  let audioDestination;
+  let animationId;
+  let drawing = false;
+
+  const chunks = [];
 
   try {
+    const duration = Math.max(
+      5,
+      Math.min(180, Number($("duration").value) || 30)
+    );
+
+    const secondsPerScene = duration / state.scenes.length;
+
+    state.current = 0;
+    showScene();
+
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    stream = canvas.captureStream(30);
+
     if (state.audio) {
       audioContext = new (
         window.AudioContext || window.webkitAudioContext
@@ -337,51 +370,59 @@ async function exportVideo() {
       });
     }
 
-    const options = {};
+    let mimeType = "";
 
-    if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")) {
-      options.mimeType = "video/webm;codecs=vp9,opus";
-    } else if (
-      MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
-    ) {
-      options.mimeType = "video/webm;codecs=vp8,opus";
+    if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")) {
+      mimeType = "video/webm;codecs=vp8,opus";
+    } else if (MediaRecorder.isTypeSupported("video/webm")) {
+      mimeType = "video/webm";
     }
 
-    recorder = new MediaRecorder(stream, options);
-
-    const chunks = [];
+    recorder = new MediaRecorder(
+      stream,
+      mimeType ? { mimeType } : undefined
+    );
 
     recorder.ondataavailable = event => {
-      if (event.data && event.data.size) {
+      if (event.data && event.data.size > 0) {
         chunks.push(event.data);
       }
     };
 
-    const recordingFinished = new Promise((resolve, reject) => {
+    const finished = new Promise((resolve, reject) => {
       recorder.onstop = resolve;
-      recorder.onerror = () => reject(new Error("حدث خطأ أثناء تسجيل الفيديو."));
+      recorder.onerror = () => {
+        reject(new Error("حدث خطأ أثناء تسجيل الفيديو."));
+      };
     });
 
-    recorder.start(250);
+    drawing = true;
 
-    if (state.audio) {
-      state.audio.currentTime = 0;
-
-      await state.audio.play().catch(() => {
-        setStatus("تعذر تشغيل ملف الصوت. سيُحاول التصدير بدونه.");
-      });
+    function keepDrawing() {
+      if (!drawing) return;
+      drawPreview();
+      animationId = requestAnimationFrame(keepDrawing);
     }
 
-    const totalSeconds = Number($("duration").value);
-    const secondsPerScene = totalSeconds / state.scenes.length;
+    keepDrawing();
+    recorder.start(1000);
+
+    if (state.audio) {
+      state.audio.pause();
+      state.audio.currentTime = 0;
+
+      try {
+        await state.audio.play();
+      } catch (error) {
+        setStatus("تعذر تشغيل الصوت. تحقق من الملف المرفوع.");
+      }
+    }
 
     for (let i = 0; i < state.scenes.length; i++) {
       state.current = i;
-      drawPreview();
+      showScene();
 
-      setStatus(
-        `جارٍ تسجيل المشهد ${i + 1} من ${state.scenes.length}...`
-      );
+      setStatus(`جارٍ تسجيل المشهد ${i + 1} من ${state.scenes.length}...`);
 
       const start = performance.now();
 
@@ -390,8 +431,17 @@ async function exportVideo() {
       }
     }
 
-    recorder.stop();
-    await recordingFinished;
+    drawing = false;
+    cancelAnimationFrame(animationId);
+
+    drawPreview();
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    if (recorder.state !== "inactive") {
+      recorder.stop();
+    }
+
+    await finished;
 
     if (state.audio) state.audio.pause();
 
@@ -415,11 +465,21 @@ async function exportVideo() {
 
     setTimeout(() => URL.revokeObjectURL(url), 60000);
 
-    setStatus("تم تصدير الفيديو. افحص الملف والصوت بعد التنزيل.");
+    setStatus(
+      `تم تصدير الفيديو بنجاح. الحجم: ${(blob.size / 1024 / 1024).toFixed(2)} ميجابايت.`
+    );
+
   } catch (error) {
-    console.error(error);
-    setStatus(error.message || "فشل التصدير. جرّب متصفحًا حديثًا.");
+    console.error("Video export error:", error);
+    setStatus("فشل التصدير: " + (error.message || "خطأ غير معروف."));
+
   } finally {
+    drawing = false;
+
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+    }
+
     if (state.audio) state.audio.pause();
 
     if (audioSource) {
@@ -429,10 +489,14 @@ async function exportVideo() {
     }
 
     if (audioContext) {
-      await audioContext.close().catch(() => {});
+      try {
+        await audioContext.close();
+      } catch {}
     }
 
-    stream.getTracks().forEach(track => track.stop());
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
 
     state.current = originalScene;
     showScene();
@@ -442,7 +506,7 @@ async function exportVideo() {
   }
 }
 
-// ربط الأزرار بالوظائف
+// ربط الأزرار
 $("build").addEventListener("click", buildScenes);
 
 $("sceneSelect").addEventListener("change", () => {
