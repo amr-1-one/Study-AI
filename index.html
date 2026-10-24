@@ -3,145 +3,140 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#100e1b">
-  <title>فكرة لفيديو | صانع الفيديوهات القصيرة</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#6d4aff">
+  <meta name="description" content="StudyAI يحول الفيديوهات التعليمية إلى ملخصات ومقالات وامتحانات.">
+  <title>StudyAI — مذاكرتك بذكاء</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="#">
-      <span class="logo">▶</span>
-      <span>فكرة لفيديو</span>
+    <a class="brand" href="#" aria-label="StudyAI الصفحة الرئيسية">
+      <span class="brand-icon">S</span>
+      <span>Study<span class="brand-ai">AI</span></span>
     </a>
-    <span class="top-note">AI SHORTS STUDIO</span>
+    <span class="header-note"><span class="status-dot"></span> مساعدك الدراسي الذكي</span>
   </header>
 
   <main class="container">
     <section class="hero">
-      <span class="eyebrow">✦ من الفكرة إلى الفيديو</span>
-      <h1>حوّل فكرتك إلى<br><span>فيديو يستحق المشاهدة</span></h1>
-      <p>اكتب فكرتك، جهّز المشاهد، أضف الصور والصوت، واصنع فيديو رأسيًا مناسبًا لـ Reels وShorts.</p>
+      <div class="eyebrow">✦ مستقبلك الدراسي يبدأ هنا</div>
+      <h1>حوّل الفيديو إلى <span>مذاكرة أذكى</span></h1>
+      <p>ارفع فيديو تعليمي، وحوّله إلى مقال منظم وملخص وأهم النقاط وامتحان تفاعلي.</p>
     </section>
 
-    <section class="workspace">
-      <section class="panel">
-        <div class="heading">
-          <span class="step">01</span>
-          <h2>اكتب فكرتك</h2>
+    <section class="panel upload-panel">
+      <div class="section-heading">
+        <div class="heading-icon">↥</div>
+        <div>
+          <h2>ارفع الفيديو التعليمي</h2>
+          <p>اختر فيديو من جهازك لبدء تجهيز المحتوى الدراسي.</p>
         </div>
+      </div>
 
-        <label for="idea">الفكرة أو النص</label>
-        <textarea id="idea" rows="5" placeholder="مثال: خمس معلومات مدهشة عن الفضاء..."></textarea>
+      <label class="dropzone" id="dropzone" for="videoFile">
+        <span class="upload-icon">↑</span>
+        <strong id="fileTitle">اضغط لاختيار الفيديو</strong>
+        <span id="fileDescription">أو اسحب الملف وأفلته هنا</span>
+        <span class="file-hint">MP4 أو MOV أو WebM — الحد المستهدف 60 دقيقة</span>
+        <input id="videoFile" type="file" accept="video/mp4,video/quicktime,video/webm,video/x-matroska,video/*">
+      </label>
 
-        <div class="fields">
-          <div>
-            <label for="duration">مدة الفيديو</label>
-            <select id="duration">
-              <option value="15">15 ثانية</option>
-              <option value="30" selected>30 ثانية</option>
-              <option value="45">45 ثانية</option>
-              <option value="60">60 ثانية</option>
-            </select>
-          </div>
-          <div>
-            <label for="style">نوع المحتوى</label>
-            <select id="style">
-              <option value="tips">نصائح ومعلومات</option>
-              <option value="story">قصة قصيرة</option>
-              <option value="motivation">تحفيزي</option>
-              <option value="education">تعليمي</option>
-            </select>
-          </div>
+      <div id="fileInfo" class="file-info hidden">
+        <div class="file-symbol">▶</div>
+        <div class="file-meta">
+          <strong id="selectedName"></strong>
+          <span id="selectedSize"></span>
         </div>
+        <button id="removeFile" class="icon-button" type="button" aria-label="إزالة الفيديو">×</button>
+      </div>
 
-        <button class="btn primary full" id="build">✦ تجهيز المشاهد</button>
-        <p class="hint">يتم تقسيم النص داخل المتصفح دون الحاجة إلى مفتاح API.</p>
+      <div class="options-row">
+        <label for="language">لغة المحتوى</label>
+        <select id="language">
+          <option value="ar">العربية</option>
+          <option value="en">English</option>
+          <option value="auto">تحديد تلقائي</option>
+        </select>
+      </div>
 
-        <hr>
-
-        <div class="heading">
-          <span class="step">02</span>
-          <h2>التعليق الصوتي</h2>
-        </div>
-
-        <label for="voiceText">نص التعليق الصوتي</label>
-        <textarea id="voiceText" rows="4" placeholder="سيظهر نص التعليق هنا..."></textarea>
-
-        <div class="fields">
-          <div>
-            <label for="voiceLang">لغة الصوت</label>
-            <select id="voiceLang">
-              <option value="ar-EG">العربية - مصر</option>
-              <option value="ar-SA">العربية</option>
-              <option value="en-US">الإنجليزية</option>
-            </select>
-          </div>
-          <div>
-            <label for="audioFile">رفع ملف صوتي</label>
-            <input id="audioFile" type="file" accept="audio/*">
-          </div>
-        </div>
-
-        <div class="actions">
-          <button class="btn secondary" id="speak">استمع للصوت</button>
-          <button class="btn ghost" id="stopSpeak">إيقاف</button>
-        </div>
-        <p class="hint">الصوت التجريبي للمعاينة فقط. لدمج الصوت في الفيديو، ارفع ملفًا صوتيًا.</p>
-      </section>
-
-      <section class="panel">
-        <div class="heading">
-          <span class="step">03</span>
-          <h2>معاينة الفيديو</h2>
-          <span class="tag">9:16</span>
-        </div>
-
-        <div class="preview-layout">
-          <div class="phone">
-            <canvas id="canvas" width="360" height="640"></canvas>
-            <p class="phone-caption">● معاينة المشهد</p>
-          </div>
-
-          <div class="scene-editor">
-            <label for="sceneSelect">المشهد الحالي</label>
-            <select id="sceneSelect">
-              <option value="0">المشهد 1</option>
-            </select>
-
-            <label for="sceneText">النص الظاهر على الشاشة</label>
-            <textarea id="sceneText" rows="5" placeholder="جهّز المشاهد أولًا..."></textarea>
-
-            <label for="imageFile">صورة المشهد</label>
-            <input id="imageFile" type="file" accept="image/*">
-            <p class="hint">يمكنك اختيار صورة مختلفة لكل مشهد.</p>
-
-            <div class="actions">
-              <button class="btn ghost" id="prev">السابق</button>
-              <button class="btn ghost" id="next">التالي</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="export">
-          <div>
-            <strong>تصدير الفيديو</strong>
-            <p id="status" role="status">اكتب فكرة ثم جهّز المشاهد.</p>
-          </div>
-          <button class="btn primary" id="export" disabled>تنزيل الفيديو ↓</button>
-        </div>
-        <p class="hint">التصدير بصيغة WebM حسب دعم المتصفح. جرّب Chrome أو Edge للحصول على أفضل توافق.</p>
-      </section>
+      <button id="analyzeBtn" class="primary-button" type="button" disabled>
+        <span>✦</span> جهّز المحتوى الدراسي
+      </button>
+      <p class="privacy-note">🔒 اختر فيديو تملك حق استخدامه، وتجنب رفع أي محتوى خاص أو حساس.</p>
+      <div id="status" class="status hidden" role="status" aria-live="polite"></div>
     </section>
 
-    <section class="notice">
-      <strong>عن النسخة الحالية</strong>
-      <p>هذه نسخة أولية تعمل دون خادم. توليد السيناريو بالذكاء الاصطناعي، وإنشاء صوت آلي قابل للدمج، وجلب الوسائط تلقائيًا تحتاج إلى تكاملات إضافية. لا تضع مفاتيح API سرية في ملفات الموقع العامة.</p>
+    <section id="results" class="results hidden">
+      <div class="results-header">
+        <div>
+          <div class="eyebrow">✦ مساحة المذاكرة</div>
+          <h2 id="resultTitle">محتواك الدراسي</h2>
+        </div>
+        <button id="downloadPdf" class="secondary-button" type="button">↓ حفظ PDF / طباعة</button>
+      </div>
+
+      <div class="summary-grid">
+        <article class="panel result-card">
+          <h3>⚡ الملخص السريع</h3>
+          <div id="summary" class="content-text"></div>
+        </article>
+        <article class="panel result-card">
+          <h3>⭐ أهم النقاط</h3>
+          <ul id="keyPoints" class="key-points"></ul>
+        </article>
+      </div>
+
+      <article class="panel result-card article-card">
+        <h3>📚 المقال الدراسي المنظم</h3>
+        <div id="article" class="content-text article-text"></div>
+      </article>
+
+      <article class="panel result-card quiz-card">
+        <div class="quiz-heading">
+          <div>
+            <h3>📝 اختبر فهمك</h3>
+            <p>جاوب عن الأسئلة ثم اضغط على التصحيح.</p>
+          </div>
+          <span id="quizCount" class="count-badge">0 أسئلة</span>
+        </div>
+        <form id="quizForm"></form>
+        <div class="quiz-actions">
+          <button id="gradeQuiz" class="primary-button" type="button">تصحيح الإجابات</button>
+          <button id="retryQuiz" class="secondary-button hidden" type="button">إعادة الامتحان</button>
+        </div>
+        <div id="quizScore" class="quiz-score hidden" role="status"></div>
+      </article>
+
+      <p class="footer-note">تم تجهيز المحتوى للمراجعة. راجع المعلومات مع المصدر الأصلي عند الحاجة.</p>
     </section>
 
-    <footer>فكرة لفيديو © 2026 — نسخة تجريبية</footer>
+    <section class="features">
+      <div class="feature">
+        <span>⚡</span>
+        <h3>ملخص سريع</h3>
+        <p>راجع الأفكار الأساسية في وقت أقل.</p>
+      </div>
+      <div class="feature">
+        <span>📖</span>
+        <h3>مقال منظم</h3>
+        <p>رتّب الدرس في عناوين ونقاط واضحة.</p>
+      </div>
+      <div class="feature">
+        <span>✓</span>
+        <h3>امتحان تفاعلي</h3>
+        <p>جاوب واعرف نتيجتك بعد التصحيح.</p>
+      </div>
+    </section>
   </main>
 
-  <script src="app.js"></script>
+  <footer>
+    <a class="brand footer-brand" href="#"><span class="brand-icon">S</span> StudyAI</a>
+    <p>مذاكرة أوضح، خطوة بخطوة.</p>
+  </footer>
 </body>
 </html>
