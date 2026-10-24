@@ -25,18 +25,23 @@ export default {
       return new Response("Origin not allowed", { status: 403 });
     }
 
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, X-Upload-Url, X-Upload-Offset, X-Upload-Finalize",
-          "Access-Control-Max-Age": "86400",
-          "Vary": "Origin"
-        }
-      });
+
+if (request.method === "OPTIONS") {
+  const requestedHeaders =
+    request.headers.get("Access-Control-Request-Headers") || "";
+
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": requestedHeaders,
+      "Access-Control-Max-Age": "86400",
+      "Vary": "Origin"
     }
+  });
+}
+
 
     if (url.pathname === "/health" && request.method === "GET") {
       return json({
