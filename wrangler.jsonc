@@ -4,10 +4,15 @@
   "name": "study-ai",
   "main": "src/index.js",
   "compatibility_date": "2026-10-24",
-"assets": {
-  "directory": ".",
-  "binding": "ASSETS",
-  "run_worker_first": ["/health", "/upload/*", "/analyze"],
-  "not_found_handling": "single-page-application"
-}
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/health",
+      "/upload/*",
+      "/analyze",
+      "/files/*"
+    ],
+    "not_found_handling": "single-page-application"
+  }
 }
