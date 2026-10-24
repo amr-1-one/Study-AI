@@ -26,6 +26,7 @@ export default {
     }
 
 
+
 if (request.method === "OPTIONS") {
   const requestedHeaders =
     request.headers.get("Access-Control-Request-Headers") || "";
@@ -41,6 +42,7 @@ if (request.method === "OPTIONS") {
     }
   });
 }
+
 
 
     if (url.pathname === "/health" && request.method === "GET") {
