@@ -1,3 +1,4 @@
+
 "use strict";
 
 // رابط Cloudflare Worker الخاص بمشروع StudyAI
@@ -46,14 +47,18 @@ function selectFile(file) {
   if (!file) return;
 
   if (!file.type.startsWith("video/")) {
-    showStatus("الملف المختار ليس فيديو. اختار ملف فيديو صالحًا.", "error");
+    showStatus(
+      "الملف المختار ليس فيديو. اختار ملف فيديو صالحًا.",
+      "error"
+    );
     return;
   }
 
   selectedFile = file;
 
   $("#fileTitle").textContent = "تم اختيار الفيديو";
-  $("#fileDescription").textContent = "يمكنك تغييره قبل بدء التحليل";
+  $("#fileDescription").textContent =
+    "يمكنك تغييره قبل بدء التحليل";
   $("#selectedName").textContent = file.name;
   $("#selectedSize").textContent = formatSize(file.size);
 
@@ -61,7 +66,7 @@ function selectFile(file) {
   analyzeBtn.disabled = false;
   hideStatus();
 
-  // قراءة المدة محليًا فقط، دون رفع الفيديو.
+  // قراءة مدة الفيديو محليًا فقط.
   const objectUrl = URL.createObjectURL(file);
   const video = document.createElement("video");
   video.preload = "metadata";
@@ -83,8 +88,11 @@ function selectFile(file) {
     if (Number.isFinite(duration)) {
       const minutes = Math.floor(duration / 60);
       const seconds = Math.floor(duration % 60);
+
       $("#selectedSize").textContent =
-        `${formatSize(file.size)} • المدة ${minutes}:${String(seconds).padStart(2, "0")}`;
+        `${formatSize(file.size)} • المدة ${minutes}:${String(
+          seconds
+        ).padStart(2, "0")}`;
     }
   };
 
@@ -124,34 +132,62 @@ analyzeBtn.addEventListener("click", async () => {
   }
 
   analyzeBtn.disabled = true;
-  showStatus("بنتحقق من جاهزية خدمة تحليل الفيديو...", "info");
+  showStatus("بنتحقق من اتصال خادم StudyAI...", "info");
 
   try {
-    // الخادم الحالي لا يحتوي على مسار /analyze بعد.
-    // نتحقق من الاتصال قبل محاولة إرسال الملف.
     const response = await fetch(`${API_BASE}/health`);
-    const health = await response.json();
 
-    if (!response.ok || !health.ok) {
-      throw new Error("خدمة StudyAI غير متاحة حاليًا.");
+    // قراءة الرد كنص أولًا حتى نعرض الخطأ حتى لو لم يكن JSON.
+    const responseText = await response.text();
+
+    let health;
+
+    try {
+      health = JSON.parse(responseText);
+    } catch {
+      throw new Error(
+        `الخادم رجع ردًا غير متوقع (HTTP ${response.status}).`
+      );
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        `الخادم رجع HTTP ${response.status}: ${
+          health.error || health.message || responseText
+        }`
+      );
+    }
+
+    if (!health.ok) {
+      throw new Error(
+        health.error || health.message || "الخادم غير جاهز."
+      );
     }
 
     showStatus(
-      "الخادم شغال، لكن تحليل الفيديو لسه محتاج توصيل Gemini ورفع الفيديو في الخادم. لم يتم تحليل الملف أو رفعه.",
+      "الاتصال بالخادم ناجح، لكن رفع الفيديو وتحليله لم يتم توصيلهما بعد.",
       "info"
     );
   } catch (error) {
-    showStatus(
-      "تعذر الوصول إلى خادم StudyAI. تأكد من نشر الـ Worker ثم حاول مرة أخرى.",
-      "error"
-    );
+    console.error("StudyAI connection error:", error);
+
+    let message = error.message || "خطأ غير معروف";
+
+    if (
+      error instanceof TypeError ||
+      /failed to fetch|networkerror/i.test(message)
+    ) {
+      message =
+        "تعذر الاتصال بالخادم. قد يكون عنوان الخادم غير صحيح، أو توجد مشكلة في الشبكة أو إعدادات CORS.";
+    }
+
+    showStatus(`فشل الاتصال بالخادم: ${message}`, "error");
   } finally {
-    analyzeBtn.disabled = false;
+    analyzeBtn.disabled = !selectedFile;
   }
 });
 
-// عرض نتائج حقيقية عندما يكتمل ربط واجهة الخادم.
-// لا نستخدم بيانات تجريبية على أنها تحليل حقيقي.
+// عرض نتائج التحليل الحقيقي بعد توصيل الخادم.
 function renderResults(data) {
   if (
     !data ||
@@ -160,7 +196,10 @@ function renderResults(data) {
     typeof data.article !== "string" ||
     !Array.isArray(data.quiz)
   ) {
-    showStatus("استجابة التحليل غير مكتملة أو بتنسيق غير صحيح.", "error");
+    showStatus(
+      "استجابة التحليل غير مكتملة أو بتنسيق غير صحيح.",
+      "error"
+    );
     return;
   }
 
@@ -186,7 +225,10 @@ function renderResults(data) {
   renderQuiz(data.quiz);
 
   $("#results").classList.remove("hidden");
-  $("#results").scrollIntoView({ behavior: "smooth", block: "start" });
+  $("#results").scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
 }
 
 function renderQuiz(questions) {
@@ -210,7 +252,6 @@ function renderQuiz(questions) {
     const feedback = document.createElement("div");
     feedback.className = "question-feedback";
     feedback.hidden = true;
-    card.appendChild(feedback);
 
     question.options.forEach((option, optionIndex) => {
       const label = document.createElement("label");
@@ -226,9 +267,10 @@ function renderQuiz(questions) {
       text.textContent = String(option);
 
       label.append(radio, text);
-      card.insertBefore(label, feedback);
+      card.appendChild(label);
     });
 
+    card.appendChild(feedback);
     form.appendChild(card);
   });
 }
@@ -251,20 +293,29 @@ $("#gradeQuiz").addEventListener("click", () => {
       `input[name="question-${index}"]:checked`
     );
 
-    const feedback = card.querySelector(".question-feedback");
-    const correctIndex = questions[index].answerIndex;
-
-    card.querySelectorAll(".answer-option").forEach((label) => {
-      label.classList.remove("correct", "incorrect");
-    });
-
     if (!selected) {
       showStatus("جاوب عن كل الأسئلة قبل التصحيح.", "error");
       return;
     }
+  }
 
+  questions.forEach((question, index) => {
+    const card = $("#quizForm").querySelector(
+      `[data-index="${index}"]`
+    );
+
+    const selected = card.querySelector(
+      `input[name="question-${index}"]:checked`
+    );
+
+    const feedback = card.querySelector(".question-feedback");
+    const correctIndex = question.answerIndex;
     const selectedIndex = Number(selected.value);
     const labels = card.querySelectorAll(".answer-option");
+
+    labels.forEach((label) => {
+      label.classList.remove("correct", "incorrect");
+    });
 
     labels[correctIndex]?.classList.add("correct");
 
@@ -275,16 +326,17 @@ $("#gradeQuiz").addEventListener("click", () => {
     }
 
     feedback.textContent =
-      `الإجابة الصحيحة: ${questions[index].options[correctIndex]}` +
-      (questions[index].explanation
-        ? ` — ${questions[index].explanation}`
+      `الإجابة الصحيحة: ${question.options[correctIndex]}` +
+      (question.explanation
+        ? ` — ${question.explanation}`
         : "");
 
     feedback.hidden = false;
+
     card.querySelectorAll("input").forEach((input) => {
       input.disabled = true;
     });
-  }
+  });
 
   $("#quizScore").textContent =
     `نتيجتك: ${score} من ${questions.length} (${Math.round(
@@ -297,15 +349,16 @@ $("#gradeQuiz").addEventListener("click", () => {
 });
 
 $("#retryQuiz").addEventListener("click", () => {
-  if (currentResults) renderQuiz(currentResults.quiz);
+  if (currentResults) {
+    renderQuiz(currentResults.quiz);
+  }
 });
 
 $("#downloadPdf").addEventListener("click", () => {
   window.print();
 });
 
-// دالة جاهزة لاستدعائها بعد توصيل استجابة Gemini الحقيقية.
-// لا تستدعِها ببيانات وهمية.
+// تستخدمها الواجهة لعرض النتائج بعد اكتمال التحليل.
 window.StudyAI = {
-  renderResults,
+  renderResults
 };
